@@ -20,7 +20,7 @@ namespace DarkFrames
         public string PluginName { get { return "DarkFrames"; } }
         public string PluginDescription { get { return "Dark title bars, borders and scroll bars for the channel windows in Windows dark mode"; } }
         public string PluginAuthor { get { return "Taoism"; } }
-        public string PluginVersion { get { return "1.0"; } }
+        public string PluginVersion { get { return "1.1"; } }
         public string PluginEmail { get { return ""; } }
 
         IPluginHost host;
@@ -248,11 +248,18 @@ namespace DarkFrames
                     active = m.WParam != IntPtr.Zero;
                     if (!Painting())
                         break;
-                    // -1: change the state without letting Windows repaint the light frame
+                {
+                    // -1: change the state without letting Windows repaint the light frame. Windows still starts
+                    // its caption fade animation, which paints a light caption for a moment (bright flashes when
+                    // AdiIRC flashes the window for a new message), so it also doesn't see the window as visible.
                     m.LParam = new IntPtr(-1);
+                    var shown = Native.GetWindowLong(Handle, -16);
+                    Native.SetWindowLong(Handle, -16, shown & ~WS_VISIBLE);
                     base.WndProc(ref m);
+                    Native.SetWindowLong(Handle, -16, shown);
                     Paint();
                     return;
+                }
                 case WM_NCUAHDRAWCAPTION:
                 case WM_NCUAHDRAWFRAME:
                     // Undocumented messages that themed windows use to redraw the caption (hover, activation)
